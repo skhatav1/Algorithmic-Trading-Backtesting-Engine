@@ -1,0 +1,17 @@
+{
+  "metrics": {
+    "total_return": -0.19464882755061297,
+    "cagr": -0.08690950061072078,
+    "volatility": 0.1249656412978805,
+    "sharpe": -0.6659955720097256,
+    "max_drawdown": -0.21853322300410238
+  },
+  "parameters": {
+    "csv": null,
+    "short_window": 10,
+    "long_window": 50,
+    "initial_cash": 100000.0,
+    "commission_bps": 1.0,
+    "slippage_bps": 2.0
+  }
+}
