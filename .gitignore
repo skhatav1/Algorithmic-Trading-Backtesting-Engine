@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Local run artifacts
+results.json
+results.txt
+equity_curve.csv
+trades.csv
+grid_results.csv
