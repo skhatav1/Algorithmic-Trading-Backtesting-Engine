@@ -1,106 +1,171 @@
-# Beginner-Friendly Backtesting MVP (Single Symbol)
+# Backtester: Event-Driven, Beginner-Friendly Engine
 
-This project is a minimal, educational backtester for **one symbol** using OHLCV data.
+This repository refactors the original single-file MVP into a modular, production-style package while preserving beginner clarity.
 
-It is intentionally simple:
-- Strategy: **SMA Crossover**
-- Execution model: **signal at close of day _t_, trade at open of day _t+1_**
-- Portfolio: tracks **cash**, **shares**, and **equity**
-- Costs: **commission** and **slippage** in basis points (bps)
-- Metrics: total return, CAGR, volatility, Sharpe (risk-free = 0), max drawdown
+Core ideas are unchanged:
+- Single symbol
+- Long-only (flat or long)
+- No lookahead bias
+- Signal generated from completed bar `t`
+- Trade filled at next bar open `t+1`
 
-## Files
+## Architecture
 
-- `backtest_mvp.py`: all logic (data loading, indicators, signals, backtest loop, metrics, plotting)
-- `results.json`: created after each run (metrics + parameters)
+```text
+CSV/Synthetic Data
+       |
+       v
++--------------------+
+|  Backtest Engine    |
+|  (event queue)      |
++--------------------+
+       |
+       +--> MarketEvent ----> Strategy ----> SignalEvent
+       |                                        |
+       |                                        v
+       |                                  Portfolio
+       |                                  (signal -> order)
+       |                                        |
+       |                                        v
+       +<---- FillEvent <---- Broker <---- OrderEvent
+                         (next-open fills + costs)
 
-## Input Data Format
+Portfolio marks equity at each bar close.
+Analytics computes metrics from equity curve.
+```
 
-CSV columns must be:
-- `timestamp`
-- `open`
-- `high`
-- `low`
-- `close`
-- `volume`
+## Repo Layout
 
-`timestamp` should be parseable by pandas datetime.
-
-## Important Concepts (Simple Explanations)
-
-### 1) Lookahead Bias
-Lookahead bias means accidentally using future information when making past decisions.
-
-In this project:
-- At day `t` close, we compute the signal using known data up to `close[t]`.
-- The earliest we can trade is **next bar**, so execution is at `open[t+1]`.
-
-This is much more realistic than buying at the same close that created the signal.
-
-### 2) Commission
-Commission is broker fee per trade.
-
-Here it is given in **basis points (bps)**:
-- `1 bps = 0.01%`
-- Example: `commission_bps = 1` means `0.01%` per buy or sell.
-
-### 3) Slippage
-Slippage models worse execution than the visible market price.
-
-In this MVP:
-- Buy uses: `open * (1 + slippage + commission)`
-- Sell uses: `open * (1 - slippage - commission)`
-
-Both are applied per trade side.
+```text
+backtester/
+  config.py
+  data/
+    loaders.py
+    bars.py
+  events/
+    base.py
+    event_types.py
+  strategies/
+    base.py
+    sma_crossover.py
+    mean_reversion.py
+  execution/
+    broker.py
+    costs.py
+  portfolio/
+    portfolio.py
+    position_sizing.py
+    risk.py
+  analytics/
+    metrics.py
+    report.py
+  engine/
+    backtest_engine.py
+  cli/
+    main.py
+tests/
+  test_metrics.py
+  test_engine_smoke.py
+```
 
 ## Installation
 
-Use Python 3.9+ and install dependencies:
-
 ```bash
-pip install pandas numpy matplotlib
+python -m pip install -e .[dev]
 ```
 
-(Plotting is optional. If matplotlib is unavailable, the script will still run and skip plotting.)
-
-## Run Examples
-
-### With your own CSV
+If your shell needs quotes:
 
 ```bash
-python backtest_mvp.py --csv data.csv --short 10 --long 50 --cash 100000 --commission_bps 1 --slippage_bps 2
+python -m pip install -e ".[dev]"
 ```
 
-### Without CSV (uses built-in synthetic data)
+## Run the CLI
+
+### SMA crossover with CSV
 
 ```bash
-python backtest_mvp.py --short 10 --long 50 --cash 100000 --commission_bps 1 --slippage_bps 2
+python -m backtester.cli.main --csv data.csv --strategy sma --short 10 --long 50 --cash 100000 --commission_bps 1 --slippage_bps 2 --no_plot
 ```
 
-### Disable plotting
+### Mean reversion with synthetic data
 
 ```bash
-python backtest_mvp.py --no_plot
+python -m backtester.cli.main --strategy mean_reversion --lookback 20 --entry_z 1.0 --exit_z 0.25 --cash 100000 --commission_bps 1 --slippage_bps 2 --no_plot
 ```
 
-## Terminal Output
+### Position sizing options
 
-The script prints:
-- total return
+- All-in/all-out (default): `--sizer all_in`
+- Fixed fraction of equity: `--sizer fixed_fraction --fraction 0.10`
+
+## No Lookahead Bias (How It Is Enforced)
+
+1. Each bar arrival creates a `MarketEvent` for completed bar `t`.
+2. Strategy reads history up to `t` close only and emits `SignalEvent`.
+3. Portfolio turns signal into an `OrderEvent`.
+4. Broker stores that order and executes it only when bar `t+1` arrives, at `open[t+1]` with costs.
+
+## Trading Costs
+
+Costs are in basis points (bps):
+- `1 bps = 0.01%`
+
+Effective fill prices:
+- Buy: `open * (1 + commission + slippage)`
+- Sell: `open * (1 - commission - slippage)`
+
+## Outputs
+
+Each run produces:
+- `results.json` (metrics + run parameters)
+- `results.txt` (human-readable summary)
+- Optional equity plot (if matplotlib available and `--no_plot` not used)
+
+Metrics include:
+- Total return
 - CAGR
-- volatility
-- Sharpe ratio
-- max drawdown
-- number of trades
+- Volatility
+- Sharpe
+- Max drawdown
+- Sortino
+- Calmar
 
-It also saves these results to `results.json`.
+## Testing
 
-## Notes on Simplicity
+Run tests:
 
-This is an MVP for learning. It uses:
-- long-only logic (flat or long)
-- all-in / all-out position sizing
-- no fractional shares
-- one symbol only
+```bash
+pytest
+```
 
-These choices keep the code easy to read while still preserving correct backtesting mechanics.
+Current tests:
+- `test_metrics.py`: deterministic checks for drawdown, volatility, Sharpe
+- `test_engine_smoke.py`: full synthetic run smoke test
+
+## Migration Notes
+
+### What changed from MVP
+
+- Moved from one script to a package with clear modules.
+- Added an explicit event model (`MarketEvent`, `SignalEvent`, `OrderEvent`, `FillEvent`).
+- Added pluggable strategy interface and second strategy (mean reversion).
+- Added broker and cost model abstractions.
+- Added position sizing abstractions (`AllInSizer`, `FixedFractionSizer`).
+- Added analytics/report module and text report output.
+- Added automated tests and packaging metadata.
+
+### How to run the new CLI
+
+```bash
+python -m backtester.cli.main --strategy sma --short 10 --long 50 --cash 100000 --commission_bps 1 --slippage_bps 2 --no_plot
+```
+
+Add `--csv path.csv` to use real data. Without it, deterministic synthetic data is used.
+
+### How to add a new strategy
+
+1. Create a new class in `backtester/strategies/` that subclasses `StrategyBase`.
+2. Implement `on_bar(market_event, history, current_position)` and return `SignalEvent` (target 0/1).
+3. Register it in `backtester/cli/main.py` inside `build_strategy` and CLI arguments.
+4. Add at least one smoke/unit test in `tests/`.
