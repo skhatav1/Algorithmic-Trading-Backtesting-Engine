@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import json
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 from typing import Any, Dict
 
 from backtester.web_adapter import json_safe, run_backtest_from_payload
+
+ROOT = Path(__file__).resolve().parents[1]
+INDEX_HTML = ROOT / "public" / "index.html"
 
 
 def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: Dict[str, Any]) -> None:
@@ -22,8 +26,24 @@ def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: Dict[s
     handler.wfile.write(body)
 
 
+def _html_response(handler: BaseHTTPRequestHandler, status: int, html: str) -> None:
+    """Write an HTML response for the dashboard page."""
+    body = html.encode("utf-8")
+    handler.send_response(status)
+    handler.send_header("Content-Type", "text/html; charset=utf-8")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
 class handler(BaseHTTPRequestHandler):
     """HTTP handler used by Vercel."""
+
+    def do_GET(self) -> None:
+        if self.path in ("/", "/index.html"):
+            _html_response(self, 200, INDEX_HTML.read_text(encoding="utf-8"))
+            return
+        _json_response(self, 404, {"ok": False, "error": "Not found"})
 
     def do_OPTIONS(self) -> None:
         _json_response(self, 200, {"ok": True})
