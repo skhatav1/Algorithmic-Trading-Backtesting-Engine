@@ -4,7 +4,7 @@
   "installCommand": "pip install -r requirements.txt",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/backtest",
       "destination": "/api/index.py"
     }
   ]
