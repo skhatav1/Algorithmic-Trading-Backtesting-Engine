@@ -78,7 +78,7 @@ tests/
 
 ## Web App
 
-The browser dashboard is in `index.html` and calls the Vercel Python Function in `api/backtest.py`.
+The browser dashboard is in `public/index.html` and calls the Vercel Python Function in `api/backtest.py`.
 
 It supports:
 - Synthetic demo data
@@ -93,8 +93,8 @@ It supports:
 
 1. Push this repo to GitHub.
 2. Import the repo in Vercel.
-3. Use the default project settings.
-4. Vercel will serve `index.html` and route `/api/backtest` to the Python function.
+3. Use the default project settings. The included `vercel.json` sets `public` as the static output directory.
+4. Vercel will serve `public/index.html` and route `/api/backtest` to the Python function.
 
 The included `requirements.txt` keeps the deployed Python runtime small:
 

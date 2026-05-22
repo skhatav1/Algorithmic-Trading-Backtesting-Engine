@@ -1,4 +1,7 @@
 {
+  "buildCommand": null,
+  "outputDirectory": "public",
+  "installCommand": "pip install -r requirements.txt",
   "functions": {
     "api/backtest.py": {
       "maxDuration": 30
