@@ -2,15 +2,10 @@
   "buildCommand": null,
   "outputDirectory": "public",
   "installCommand": "pip install -r requirements.txt",
-  "functions": {
-    "api/backtest.js": {
-      "maxDuration": 30
-    }
-  },
   "rewrites": [
     {
       "source": "/api/backtest",
-      "destination": "/api/backtest.js"
+      "destination": "/api/index.py"
     }
   ]
 }

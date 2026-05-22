@@ -78,8 +78,8 @@ tests/
 
 ## Web App
 
-The browser dashboard is in `public/index.html` and calls the Vercel API route in `api/backtest.js`.
-That Node route invokes the existing Python backtester through `backtester.web_adapter`.
+The browser dashboard is in `public/index.html` and calls the Vercel Python entrypoint in `api/index.py`.
+That route invokes the existing Python backtester through `backtester.web_adapter`.
 
 It supports:
 - Synthetic demo data

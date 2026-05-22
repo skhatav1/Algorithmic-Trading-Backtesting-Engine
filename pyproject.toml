@@ -25,3 +25,6 @@ plot = [
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-q"
+
+[tool.vercel]
+entrypoint = "api/index.py"
