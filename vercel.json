@@ -2,6 +2,11 @@
   "buildCommand": null,
   "outputDirectory": "public",
   "installCommand": "pip install -r requirements.txt",
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "api/dashboard.html"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/backtest",

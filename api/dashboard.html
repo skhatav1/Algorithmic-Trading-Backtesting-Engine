@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quant Backtesting Dashboard</title>
+    <style>
+      :root {
+        --paper: #f7f2e8;
+        --panel: #fffaf0;
+        --ink: #191b18;
+        --muted: #6b6d64;
+        --line: #d8cfbd;
+        --green: #0f7b63;
+        --red: #a33c2f;
+        --gold: #b7791f;
+        --charcoal: #252922;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background:
+          linear-gradient(135deg, rgba(15, 123, 99, 0.12), transparent 34%),
+          repeating-linear-gradient(90deg, rgba(25, 27, 24, 0.035) 0 1px, transparent 1px 76px),
+          var(--paper);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .shell {
+        width: min(1240px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 40px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        padding-bottom: 22px;
+        border-bottom: 2px solid var(--charcoal);
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 820px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(2.1rem, 6vw, 5rem);
+        font-weight: 700;
+        line-height: 0.96;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 12px 0 0;
+        max-width: 780px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+
+      .status {
+        min-width: 188px;
+        padding: 10px 12px;
+        color: var(--panel);
+        background: var(--charcoal);
+        border: 2px solid var(--charcoal);
+        text-align: center;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 350px minmax(0, 1fr);
+        gap: 22px;
+        margin-top: 22px;
+      }
+
+      .controls,
+      .results,
+      .table-wrap {
+        background: rgba(255, 250, 240, 0.86);
+        border: 2px solid var(--charcoal);
+        box-shadow: 8px 8px 0 rgba(25, 27, 24, 0.14);
+      }
+
+      .controls {
+        padding: 16px;
+      }
+
+      .section-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0 0 14px;
+        font-size: 0.86rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .field {
+        display: grid;
+        gap: 7px;
+        margin-bottom: 13px;
+      }
+
+      label {
+        color: var(--muted);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-height: 40px;
+        padding: 9px 10px;
+        color: var(--ink);
+        background: #fffdf6;
+        border: 1px solid var(--line);
+        border-radius: 0;
+      }
+
+      input[type="file"] {
+        min-height: auto;
+        background: transparent;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .button-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      button {
+        min-height: 44px;
+        border: 2px solid var(--charcoal);
+        background: var(--panel);
+        color: var(--ink);
+        cursor: pointer;
+      }
+
+      button.primary {
+        color: #fffaf0;
+        background: var(--green);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
+      .results {
+        padding: 16px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .metric {
+        min-height: 86px;
+        padding: 11px;
+        border: 1px solid var(--line);
+        background: #fffdf6;
+      }
+
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 10px;
+        font-size: clamp(1.1rem, 3vw, 1.65rem);
+        overflow-wrap: anywhere;
+      }
+
+      .chart-frame {
+        margin-top: 16px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        background: #fffdf6;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 360px;
+      }
+
+      .table-wrap {
+        margin-top: 22px;
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fffdf6;
+      }
+
+      th,
+      td {
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .gain {
+        color: var(--green);
+      }
+
+      .loss {
+        color: var(--red);
+      }
+
+      .note {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.55;
+      }
+
+      @media (max-width: 920px) {
+        .topbar {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .status {
+          min-width: 0;
+        }
+
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 540px) {
+        .shell {
+          width: min(100% - 20px, 1240px);
+          padding-top: 18px;
+        }
+
+        .row,
+        .button-row,
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+
+        canvas {
+          height: 280px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Quant Backtesting Dashboard</h1>
+          <p class="subtitle">
+            Run a no-lookahead strategy simulation with next-open fills, portfolio accounting, costs, metrics,
+            equity curve, and trade log.
+          </p>
+        </div>
+        <div class="status" id="status">Ready</div>
+      </header>
+
+      <section class="layout">
+        <form class="controls" id="controls">
+          <h2 class="section-title">Backtest Setup <span>DEMO</span></h2>
+
+          <div class="field">
+            <label for="strategy">Strategy</label>
+            <select id="strategy" name="strategy">
+              <option value="sma">SMA crossover</option>
+              <option value="mean_reversion">Mean reversion</option>
+            </select>
+          </div>
+
+          <div id="sma-fields">
+            <div class="row">
+              <div class="field">
+                <label for="short_window">Short SMA</label>
+                <input id="short_window" name="short_window" type="number" min="2" value="10" />
+              </div>
+              <div class="field">
+                <label for="long_window">Long SMA</label>
+                <input id="long_window" name="long_window" type="number" min="3" value="50" />
+              </div>
+            </div>
+          </div>
+
+          <div id="mr-fields" hidden>
+            <div class="row">
+              <div class="field">
+                <label for="lookback">Lookback</label>
+                <input id="lookback" name="lookback" type="number" min="3" value="20" />
+              </div>
+              <div class="field">
+                <label for="entry_z">Entry Z</label>
+                <input id="entry_z" name="entry_z" type="number" step="0.1" value="1.0" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="exit_z">Exit Z</label>
+              <input id="exit_z" name="exit_z" type="number" step="0.05" value="0.25" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="cash">Initial Cash</label>
+              <input id="cash" name="cash" type="number" min="1000" value="100000" />
+            </div>
+            <div class="field">
+              <label for="synthetic_bars">Synthetic Bars</label>
+              <input id="synthetic_bars" name="synthetic_bars" type="number" min="60" max="2000" value="600" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="commission_bps">Commission BPS</label>
+              <input id="commission_bps" name="commission_bps" type="number" min="0" step="0.1" value="1" />
+            </div>
+            <div class="field">
+              <label for="slippage_bps">Slippage BPS</label>
+              <input id="slippage_bps" name="slippage_bps" type="number" min="0" step="0.1" value="2" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="sizer">Sizer</label>
+              <select id="sizer" name="sizer">
+                <option value="all_in">All in</option>
+                <option value="fixed_fraction">Fixed fraction</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="fraction">Fraction</label>
+              <input id="fraction" name="fraction" type="number" min="0.01" max="1" step="0.01" value="0.10" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="csv_file">Upload OHLCV CSV</label>
+            <input id="csv_file" name="csv_file" type="file" accept=".csv,text/csv" />
+          </div>
+
+          <div class="button-row">
+            <button type="submit" class="primary" id="run-button">Run Backtest</button>
+            <button type="button" id="download-button" disabled>Download JSON</button>
+          </div>
+          <p class="note">CSV columns: timestamp, open, high, low, close, volume. Leave upload empty to use synthetic data.</p>
+        </form>
+
+        <section class="results">
+          <h2 class="section-title">Performance <span id="bar-count">0 bars</span></h2>
+          <div class="metrics" id="metrics"></div>
+          <div class="chart-frame">
+            <canvas id="equity-chart" width="900" height="360"></canvas>
+          </div>
+        </section>
+      </section>
+
+      <section class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Side</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Commission</th>
+              <th>Slippage</th>
+            </tr>
+          </thead>
+          <tbody id="trades"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <script>
+      const form = document.querySelector("#controls");
+      const statusEl = document.querySelector("#status");
+      const metricsEl = document.querySelector("#metrics");
+      const tradesEl = document.querySelector("#trades");
+      const barCountEl = document.querySelector("#bar-count");
+      const chart = document.querySelector("#equity-chart");
+      const downloadButton = document.querySelector("#download-button");
+      const strategySelect = document.querySelector("#strategy");
+      const smaFields = document.querySelector("#sma-fields");
+      const mrFields = document.querySelector("#mr-fields");
+      let lastResult = null;
+
+      const metricLabels = [
+        ["total_return", "Total Return", "percent"],
+        ["cagr", "CAGR", "percent"],
+        ["volatility", "Volatility", "percent"],
+        ["sharpe", "Sharpe", "number"],
+        ["max_drawdown", "Max Drawdown", "percent"],
+        ["sortino", "Sortino", "number"],
+        ["calmar", "Calmar", "number"],
+      ];
+
+      function formatMetric(value, kind) {
+        if (!Number.isFinite(value)) return "N/A";
+        if (kind === "percent") return `${(value * 100).toFixed(2)}%`;
+        return value.toFixed(3);
+      }
+
+      function numberValue(formData, key) {
+        const value = Number(formData.get(key));
+        return Number.isFinite(value) ? value : undefined;
+      }
+
+      async function fileText(file) {
+        if (!file) return "";
+        return await file.text();
+      }
+
+      function setStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      function renderMetrics(metrics) {
+        metricsEl.innerHTML = metricLabels
+          .map(([key, label, kind]) => {
+            const raw = metrics[key];
+            const valueClass = raw < 0 ? "loss" : raw > 0 ? "gain" : "";
+            return `<article class="metric"><span>${label}</span><strong class="${valueClass}">${formatMetric(raw, kind)}</strong></article>`;
+          })
+          .join("");
+      }
+
+      function renderTrades(trades) {
+        if (!trades.length) {
+          tradesEl.innerHTML = `<tr><td colspan="6">No trades generated for this run.</td></tr>`;
+          return;
+        }
+        tradesEl.innerHTML = trades
+          .slice(-12)
+          .reverse()
+          .map((trade) => {
+            const sideClass = trade.side === "BUY" ? "gain" : "loss";
+            return `
+              <tr>
+                <td>${trade.timestamp}</td>
+                <td class="${sideClass}">${trade.side}</td>
+                <td>${trade.quantity}</td>
+                <td>${Number(trade.fill_price).toFixed(2)}</td>
+                <td>${Number(trade.commission_paid).toFixed(2)}</td>
+                <td>${Number(trade.slippage_paid).toFixed(2)}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      function drawChart(points) {
+        const ctx = chart.getContext("2d");
+        const width = chart.width;
+        const height = chart.height;
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = "#fffdf6";
+        ctx.fillRect(0, 0, width, height);
+
+        if (!points.length) return;
+
+        const values = points.map((point) => point.equity);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const pad = 34;
+        const range = max - min || 1;
+
+        ctx.strokeStyle = "#d8cfbd";
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i += 1) {
+          const y = pad + ((height - pad * 2) * i) / 4;
+          ctx.beginPath();
+          ctx.moveTo(pad, y);
+          ctx.lineTo(width - pad, y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = values[values.length - 1] >= values[0] ? "#0f7b63" : "#a33c2f";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        points.forEach((point, idx) => {
+          const x = pad + ((width - pad * 2) * idx) / Math.max(1, points.length - 1);
+          const y = height - pad - ((point.equity - min) / range) * (height - pad * 2);
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        ctx.fillStyle = "#6b6d64";
+        ctx.font = "12px Menlo, monospace";
+        ctx.fillText(`High ${max.toFixed(0)}`, pad, 18);
+        ctx.fillText(`Low ${min.toFixed(0)}`, pad, height - 12);
+      }
+
+      function renderResult(result) {
+        lastResult = result;
+        barCountEl.textContent = `${result.bars} bars`;
+        renderMetrics(result.metrics);
+        renderTrades(result.trades);
+        drawChart(result.equity_curve);
+        downloadButton.disabled = false;
+      }
+
+      async function runBacktest(event) {
+        event.preventDefault();
+        setStatus("Running");
+        document.querySelector("#run-button").disabled = true;
+
+        try {
+          const data = new FormData(form);
+          const payload = {
+            strategy: data.get("strategy"),
+            short_window: numberValue(data, "short_window"),
+            long_window: numberValue(data, "long_window"),
+            lookback: numberValue(data, "lookback"),
+            entry_z: numberValue(data, "entry_z"),
+            exit_z: numberValue(data, "exit_z"),
+            cash: numberValue(data, "cash"),
+            commission_bps: numberValue(data, "commission_bps"),
+            slippage_bps: numberValue(data, "slippage_bps"),
+            synthetic_bars: numberValue(data, "synthetic_bars"),
+            sizer: data.get("sizer"),
+            fraction: numberValue(data, "fraction"),
+            csv_text: await fileText(document.querySelector("#csv_file").files[0]),
+          };
+
+          const response = await fetch("/api/backtest", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const body = await response.json();
+          if (!response.ok || !body.ok) throw new Error(body.error || "Backtest failed");
+          renderResult(body.result);
+          setStatus("Complete");
+        } catch (error) {
+          setStatus("Error");
+          alert(error.message);
+        } finally {
+          document.querySelector("#run-button").disabled = false;
+        }
+      }
+
+      function downloadResult() {
+        if (!lastResult) return;
+        const blob = new Blob([JSON.stringify(lastResult, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "backtest-results.json";
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      strategySelect.addEventListener("change", () => {
+        const isSma = strategySelect.value === "sma";
+        smaFields.hidden = !isSma;
+        mrFields.hidden = isSma;
+      });
+
+      form.addEventListener("submit", runBacktest);
+      downloadButton.addEventListener("click", downloadResult);
+      form.dispatchEvent(new Event("submit"));
+    </script>
+  </body>
+</html>

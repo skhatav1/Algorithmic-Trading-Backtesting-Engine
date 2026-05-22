@@ -10,6 +10,7 @@ from typing import Any, Dict
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX_HTML = ROOT / "public" / "index.html"
+FUNCTION_INDEX_HTML = Path(__file__).with_name("dashboard.html")
 
 
 def json_safe(value: Any) -> Any:
@@ -55,8 +56,9 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path in ("/", "/index.html"):
-            if INDEX_HTML.exists():
-                _html_response(self, 200, INDEX_HTML.read_text(encoding="utf-8"))
+            html_path = INDEX_HTML if INDEX_HTML.exists() else FUNCTION_INDEX_HTML
+            if html_path.exists():
+                _html_response(self, 200, html_path.read_text(encoding="utf-8"))
                 return
             _html_response(
                 self,
@@ -65,6 +67,15 @@ class handler(BaseHTTPRequestHandler):
             )
             return
         _json_response(self, 404, {"ok": False, "error": "Not found"})
+
+    def do_HEAD(self) -> None:
+        if self.path in ("/", "/index.html"):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            return
+        self.send_response(404)
+        self.end_headers()
 
     def do_OPTIONS(self) -> None:
         _json_response(self, 200, {"ok": True})
