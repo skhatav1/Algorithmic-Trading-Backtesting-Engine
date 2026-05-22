@@ -1,8 +1,8 @@
-"""Tests for the Vercel API backtest adapter."""
+"""Tests for the web backtest adapter."""
 
 from __future__ import annotations
 
-from api.backtest import run_backtest_from_payload
+from backtester.web_adapter import run_backtest_from_payload
 
 
 def test_web_api_payload_runs_backtest() -> None:

@@ -1,20 +1,14 @@
-"""Vercel Python Function for running browser-triggered backtests."""
+"""Adapter used by the web dashboard API."""
 
 from __future__ import annotations
 
 import json
 import math
 import sys
-from http.server import BaseHTTPRequestHandler
 from io import StringIO
-from pathlib import Path
 from typing import Any, Dict
 
 import pandas as pd
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 from backtester.data.loaders import _validate_ohlcv_frame, generate_synthetic_ohlcv
 from backtester.engine.backtest_engine import BacktestEngine
@@ -30,31 +24,18 @@ MAX_CSV_BYTES = 1_500_000
 MAX_SYNTHETIC_BARS = 2_000
 
 
-def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: Dict[str, Any]) -> None:
-    """Write a JSON response for Vercel's Python runtime."""
-    body = json.dumps(_json_safe(payload), allow_nan=False).encode("utf-8")
-    handler.send_response(status)
-    handler.send_header("Content-Type", "application/json")
-    handler.send_header("Access-Control-Allow-Origin", "*")
-    handler.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
-    handler.send_header("Content-Length", str(len(body)))
-    handler.end_headers()
-    handler.wfile.write(body)
-
-
-def _json_safe(value: Any) -> Any:
+def json_safe(value: Any) -> Any:
     """Convert pandas/numpy values and non-finite floats into valid JSON values."""
     if isinstance(value, dict):
-        return {str(key): _json_safe(item) for key, item in value.items()}
+        return {str(key): json_safe(item) for key, item in value.items()}
     if isinstance(value, list):
-        return [_json_safe(item) for item in value]
+        return [json_safe(item) for item in value]
     if isinstance(value, tuple):
-        return [_json_safe(item) for item in value]
+        return [json_safe(item) for item in value]
     if isinstance(value, float) and not math.isfinite(value):
         return None
     if hasattr(value, "item"):
-        return _json_safe(value.item())
+        return json_safe(value.item())
     return value
 
 
@@ -158,17 +139,12 @@ def run_backtest_from_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-class handler(BaseHTTPRequestHandler):
-    """HTTP handler used by Vercel."""
+def main() -> None:
+    """CLI bridge for the Node Vercel function."""
+    payload = json.loads(sys.stdin.read() or "{}")
+    result = run_backtest_from_payload(payload)
+    print(json.dumps({"ok": True, "result": json_safe(result)}, allow_nan=False))
 
-    def do_OPTIONS(self) -> None:
-        _json_response(self, 200, {"ok": True})
 
-    def do_POST(self) -> None:
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-            payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
-            result = run_backtest_from_payload(payload)
-            _json_response(self, 200, {"ok": True, "result": result})
-        except Exception as exc:
-            _json_response(self, 400, {"ok": False, "error": str(exc)})
+if __name__ == "__main__":
+    main()
