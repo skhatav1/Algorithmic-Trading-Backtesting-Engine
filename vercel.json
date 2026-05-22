@@ -3,8 +3,9 @@
   "outputDirectory": "public",
   "installCommand": "pip install -r requirements.txt",
   "functions": {
-    "api/backtest.py": {
-      "maxDuration": 30
+    "api/**/*.py": {
+      "maxDuration": 30,
+      "excludeFiles": "{tests/**,**/__pycache__/**,**/*.pyc,backtester.egg-info/**}"
     }
   },
   "rewrites": [
