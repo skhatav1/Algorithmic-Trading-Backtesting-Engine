@@ -1,6 +1,7 @@
 # Backtester: Event-Driven, Beginner-Friendly Engine
 
 This repository refactors the original single-file MVP into a modular, production-style package while preserving beginner clarity.
+It now includes both a command-line research package and a lightweight Vercel-ready browser dashboard.
 
 Core ideas are unchanged:
 - Single symbol
@@ -65,6 +66,8 @@ backtester/
     walkforward.py
   cli/
     main.py
+api/
+  backtest.py
 tests/
   test_benchmark_alignment.py
   test_metrics.py
@@ -72,6 +75,44 @@ tests/
   test_grid_search_outputs_csv.py
   test_walkforward_split_order.py
 ```
+
+## Web App
+
+The browser dashboard is in `index.html` and calls the Vercel Python Function in `api/backtest.py`.
+
+It supports:
+- Synthetic demo data
+- CSV upload with `timestamp, open, high, low, close, volume`
+- SMA crossover and mean reversion
+- Commission/slippage controls
+- Equity chart
+- Metrics and trade log
+- JSON result download
+
+### Deploy on Vercel
+
+1. Push this repo to GitHub.
+2. Import the repo in Vercel.
+3. Use the default project settings.
+4. Vercel will serve `index.html` and route `/api/backtest` to the Python function.
+
+The included `requirements.txt` keeps the deployed Python runtime small:
+
+```text
+numpy
+pandas
+```
+
+### Local Web Preview
+
+For the full API-backed web app, install the Vercel CLI and run:
+
+```bash
+npm install -g vercel
+vercel dev
+```
+
+Then open the local URL Vercel prints in your terminal.
 
 ## Installation
 

@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/backtest.py": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/backtest",
+      "destination": "/api/backtest.py"
+    }
+  ]
+}
