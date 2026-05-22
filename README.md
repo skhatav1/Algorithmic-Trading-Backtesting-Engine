@@ -61,11 +61,16 @@ backtester/
     report.py
   engine/
     backtest_engine.py
+    grid_search.py
+    walkforward.py
   cli/
     main.py
 tests/
+  test_benchmark_alignment.py
   test_metrics.py
   test_engine_smoke.py
+  test_grid_search_outputs_csv.py
+  test_walkforward_split_order.py
 ```
 
 ## Installation
@@ -78,6 +83,12 @@ If your shell needs quotes:
 
 ```bash
 python -m pip install -e ".[dev]"
+```
+
+Plotting is optional:
+
+```bash
+python -m pip install -e ".[plot]"
 ```
 
 ## Run the CLI
@@ -98,6 +109,39 @@ python -m backtester.cli.main --strategy mean_reversion --lookback 20 --entry_z 
 
 - All-in/all-out (default): `--sizer all_in`
 - Fixed fraction of equity: `--sizer fixed_fraction --fraction 0.10`
+
+### Benchmark comparison
+
+Benchmark CSV files need `timestamp` and `close` columns. The benchmark is aligned to strategy timestamps with an inner join.
+
+```bash
+python -m backtester.cli.main --benchmark_csv benchmark.csv --strategy sma --short 10 --long 50 --no_plot
+```
+
+Benchmark output includes:
+- Benchmark equity curve starting from the same initial cash
+- Benchmark metrics
+- Alpha, beta, and correlation versus benchmark returns
+
+### Walk-forward evaluation
+
+```bash
+python -m backtester.cli.main --strategy sma --short 10 --long 50 --walkforward --split_ratio 0.7 --no_plot
+```
+
+The split is strictly chronological:
+- First 70%: in-sample
+- Last 30%: out-of-sample
+
+### SMA grid search
+
+```bash
+python -m backtester.cli.main --strategy sma --grid_search --short_grid 5,10,20 --long_grid 30,50,100 --split_ratio 0.7 --no_plot
+```
+
+Grid search ranks parameters by:
+- Best out-of-sample Sharpe
+- Tie-breaker: less severe max drawdown
 
 ## No Lookahead Bias (How It Is Enforced)
 
@@ -120,6 +164,9 @@ Effective fill prices:
 Each run produces:
 - `results.json` (metrics + run parameters)
 - `results.txt` (human-readable summary)
+- `equity_curve.csv` (equity and return history)
+- `trades.csv` (trade log)
+- `grid_results.csv` (when grid search is enabled)
 - Optional equity plot (if matplotlib available and `--no_plot` not used)
 
 Metrics include:
@@ -130,6 +177,7 @@ Metrics include:
 - Max drawdown
 - Sortino
 - Calmar
+- Alpha, beta, and correlation when a benchmark is provided
 
 ## Testing
 
@@ -142,6 +190,9 @@ pytest
 Current tests:
 - `test_metrics.py`: deterministic checks for drawdown, volatility, Sharpe
 - `test_engine_smoke.py`: full synthetic run smoke test
+- `test_benchmark_alignment.py`: benchmark timestamp alignment and alpha/beta checks
+- `test_walkforward_split_order.py`: chronological split validation
+- `test_grid_search_outputs_csv.py`: grid-search CSV and best-parameter checks
 
 ## Migration Notes
 
@@ -154,6 +205,7 @@ Current tests:
 - Added position sizing abstractions (`AllInSizer`, `FixedFractionSizer`).
 - Added analytics/report module and text report output.
 - Added automated tests and packaging metadata.
+- Added benchmark comparison, walk-forward evaluation, and SMA grid search.
 
 ### How to run the new CLI
 

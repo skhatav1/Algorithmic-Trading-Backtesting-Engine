@@ -7,13 +7,6 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
-try:
-    import matplotlib.pyplot as plt
-
-    HAS_MATPLOTLIB = True
-except Exception:
-    HAS_MATPLOTLIB = False
-
 
 def build_text_report(
     metrics: Dict[str, float],
@@ -102,7 +95,12 @@ def save_trades_csv(trades_frame: pd.DataFrame, path: str = "trades.csv") -> Non
 
 def maybe_plot_equity(equity_frame: pd.DataFrame, no_plot: bool = False) -> None:
     """Plot equity curve when matplotlib is available and plotting is enabled."""
-    if no_plot or not HAS_MATPLOTLIB:
+    if no_plot:
+        return
+
+    try:
+        import matplotlib.pyplot as plt
+    except Exception:
         return
 
     plt.figure(figsize=(10, 5))
